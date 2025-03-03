@@ -4,7 +4,8 @@
   "description": "A minimal template to compile vue with webpack and gulp",
   "main": "index.js",
   "scripts": {
-    "dev": "gulp watch"
+    "dev": "gulp watch",
+    "build": "gulp buildTask"
   },
   "author": "Adinan Cenci",
   "license": "ISC",

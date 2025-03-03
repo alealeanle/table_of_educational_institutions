@@ -1,13 +1,15 @@
 import gulp from 'gulp';
 import fs from 'fs';
 import path from 'path';
-import rename from 'gulp-rename';
 import webpack from 'webpack';
 import webpackStream from 'webpack-stream';
 import browserSyncLib from 'browser-sync';
 import { VueLoaderPlugin } from 'vue-loader';
+import { fileURLToPath } from 'url';
 
 const browserSync = browserSyncLib.create();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distFolder = 'dist';
 
 async function clean() {
   try {
@@ -26,11 +28,12 @@ async function build() {
     .pipe(
       webpackStream({
         mode: 'development',
-        watch: true,
+        watch: false,
         cache: false,
         entry: './main.js',
         output: {
           filename: 'bundle.js',
+          publicPath: '/',
         },
         resolve: {
           alias: {
@@ -71,7 +74,17 @@ async function build() {
             },
             {
               test: /\.(woff2?|ttf|eot|otf)$/,
-              type: 'asset/inline',
+              type: 'asset/resource',
+              generator: {
+                filename: 'assets/fonts/[name][ext]',
+              },
+            },
+            {
+              test: /\.svg$/,
+              type: 'asset/resource',
+              generator: {
+                filename: 'assets/svg/[name][ext]',
+              },
             },
           ],
         },
@@ -84,21 +97,24 @@ async function build() {
           new webpack.LoaderOptionsPlugin({
             debug: true,
             options: {
-              watch: true,
+              watch: false,
             },
           }),
         ],
       }),
     )
-    .pipe(rename('bundle.js'))
-    .pipe(gulp.dest('./'))
+    .pipe(gulp.dest(distFolder))
     .pipe(browserSync.stream());
+}
+
+function copyStatic() {
+  return gulp.src(['index.html', 'src/assets/**/*', 'src/stubs/**/*'], { base: '.' }).pipe(gulp.dest(distFolder));
 }
 
 function serve() {
   browserSync.init({
     server: {
-      baseDir: './',
+      baseDir: distFolder,
       index: 'index.html',
     },
     open: true,
@@ -107,9 +123,8 @@ function serve() {
   });
 
   gulp.watch(
-    ['./main.js', './components/**/*.vue', './styles/**/*.scss', './index.html'],
-    { ignoreInitial: false },
-    gulp.series(clean, build, done => {
+    ['./main.js', './src/components/**/*.vue', './src/styles/**/*.scss', './index.html'],
+    gulp.series(clean, copyStatic, build, done => {
       browserSync.reload();
       done();
     }),
@@ -117,6 +132,6 @@ function serve() {
 }
 
 export { clean };
-export const buildTask = gulp.series(clean, build);
-export const watch = gulp.series(clean, build, serve);
-export default gulp.series(clean, build, serve);
+export const buildTask = gulp.series(clean, copyStatic, build);
+export const watch = gulp.series(clean, copyStatic, build, serve);
+export default gulp.series(clean, copyStatic, build, serve);
