@@ -1,0 +1,34 @@
+{
+  "name": "vue3-webpack-gulp-template",
+  "version": "0.0.0",
+  "description": "A minimal template to compile vue with webpack and gulp",
+  "main": "index.js",
+  "scripts": {
+    "dev": "gulp watch"
+  },
+  "author": "Adinan Cenci",
+  "license": "ISC",
+  "dependencies": {
+    "@vuepic/vue-datepicker": "^11.0.1",
+    "@vueuse/core": "^12.7.0",
+    "date-fns": "^4.1.0",
+    "pinia": "^3.0.1",
+    "vue": "^3.2.47",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.2.47",
+    "browser-sync": "^3.0.3",
+    "css-loader": "^6.7.3",
+    "del": "^8.0.0",
+    "gulp": "^4.0.2",
+    "gulp-rename": "^2.0.0",
+    "prettier": "^3.5.2",
+    "sass": "^1.85.1",
+    "sass-loader": "^16.0.5",
+    "vue-loader": "^17.0.1",
+    "vue-style-loader": "^4.1.3",
+    "webpack": "^5.64.1",
+    "webpack-stream": "^7.0.0"
+  }
+}
