@@ -1,7 +1,10 @@
 <script setup>
-import { computed, defineProps, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useStubStore } from '@/stores';
+import { fetchList } from '@api/fetchList';
 import Pagination from '@TablePage/Pagination';
+import Loading from '@commons/Loading';
 
 const props = defineProps({
   searchQuery: String,
@@ -10,18 +13,84 @@ const props = defineProps({
   selectedStatus: String,
 });
 
+const route = useRoute();
+const router = useRouter();
 const store = useStubStore();
-const list = store.list;
-
-const parseDate = dateStr => {
-  const [day, month, year] = dateStr.split('/').map(Number);
-  return new Date(year, month - 1, day);
-};
 
 const sortColumn = ref(null);
 const sortOrder = ref(1);
-const currentPage = ref(1);
-const recordsPerPage = ref(10);
+const currentPage = ref(Number(route.query.page) || 1);
+const recordsPerPage = ref(Number(route.query.limit) || 10);
+const list = computed(() => store.response.list);
+const loading = computed(() => store.loading);
+const error = computed(() => store.error);
+
+const updateURLParams = () => {
+  router.replace({
+    query: {
+      ...route.query,
+      page: currentPage.value,
+      limit: recordsPerPage.value,
+    },
+  });
+};
+
+onMounted(() => {
+  if (!route.query.page || !route.query.limit) {
+    updateURLParams();
+  }
+
+  fetchList({ count: recordsPerPage.value, page: currentPage.value });
+});
+
+watch(
+  () => route.query,
+  newQuery => {
+    if (newQuery.page) {
+      currentPage.value = Number(newQuery.page);
+    }
+    if (newQuery.limit) {
+      recordsPerPage.value = Number(newQuery.limit);
+    }
+
+    fetchList({ count: recordsPerPage.value, page: currentPage.value });
+  },
+  { immediate: true },
+);
+
+watch([currentPage, recordsPerPage], () => {
+  updateURLParams();
+});
+
+const filteredList = computed(() => {
+  if (!list.value || !Array.isArray(list.value)) return [];
+
+  return list.value.filter(item => {
+    if (!item.updated_at) return false;
+
+    const itemDate = new Date(item.updated_at);
+    const query = props.searchQuery ? props.searchQuery.toLowerCase() : '';
+
+    const isWithinDateRange =
+      props.dateRange.length === 2
+        ? itemDate >= new Date(props.dateRange[0]) && itemDate <= new Date(props.dateRange[1])
+        : true;
+
+    const matchesSearchQuery =
+      query === '' ||
+      item.edu_org?.region?.name?.toLowerCase().includes(query) ||
+      item.edu_org?.short_name?.toLowerCase().includes(query) ||
+      item.edu_org?.contact_info?.post_address?.toLowerCase().includes(query);
+
+    const matchesStatus =
+      props.selectedStatus === 'Все' ||
+      item.supplements.some(supplement => supplement.status.name === props.selectedStatus);
+
+    const matchesType = props.selectedType === 'Все' || item.type.name === props.selectedType;
+
+    return isWithinDateRange && matchesSearchQuery && matchesStatus && matchesType;
+  });
+});
 
 const sortByColumn = column => {
   if (sortColumn.value === column) {
@@ -32,72 +101,52 @@ const sortByColumn = column => {
   }
 };
 
-const filteredList = computed(() => {
-  let sortedList = [...list].filter(item => {
-    const itemDate = parseDate(item.date);
-    const query = props.searchQuery ? props.searchQuery.toLowerCase() : '';
+const sortedList = computed(() => {
+  if (!filteredList.value || filteredList.value.length === 0) return [];
 
-    const isWithinDateRange =
-      props.dateRange.length === 2
-        ? itemDate >= new Date(props.dateRange[0]) && itemDate <= new Date(props.dateRange[1])
-        : true;
+  return [...filteredList.value].sort((a, b) => {
+    let valA, valB;
 
-    const matchesType = props.selectedType === 'Все' || item.level.includes(props.selectedType);
+    switch (sortColumn.value) {
+      case 'date':
+        valA = new Date(a.updated_at);
+        valB = new Date(b.updated_at);
+        break;
+      case 'region':
+        valA = a.edu_org?.region?.name || '';
+        valB = b.edu_org?.region?.name || '';
+        break;
+      case 'name':
+        valA = a.edu_org?.short_name || a.edu_org?.full_name || '';
+        valB = b.edu_org?.short_name || b.edu_org?.full_name || '';
+        break;
+      case 'address':
+        valA = a.edu_org?.contact_info?.post_address || '';
+        valB = b.edu_org?.contact_info?.post_address || '';
+        break;
+      case 'level':
+        valA = getUniqueEduLevels(a.supplements).join(', ');
+        valB = getUniqueEduLevels(b.supplements).join(', ');
+        break;
+      default:
+        return 0;
+    }
 
-    const matchesStatus =
-      props.selectedStatus === 'completed'
-        ? item.completed
-        : props.selectedStatus === 'not_completed'
-          ? !item.completed
-          : props.selectedStatus === 'all';
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
 
-    const matchesSearchQuery =
-      query === '' ||
-      item.region.toLowerCase().includes(query) ||
-      item.name.toLowerCase().includes(query) ||
-      item.address.toLowerCase().includes(query);
-
-    return isWithinDateRange && matchesSearchQuery && matchesType && matchesStatus;
+    return valA > valB ? sortOrder.value : valA < valB ? -sortOrder.value : 0;
   });
-
-  if (sortColumn.value) {
-    sortedList.sort((a, b) => {
-      let valA = a[sortColumn.value];
-      let valB = b[sortColumn.value];
-
-      if (sortColumn.value === 'date') {
-        valA = parseDate(valA);
-        valB = parseDate(valB);
-      }
-
-      if (Array.isArray(valA) && Array.isArray(valB)) {
-        return (valA.length - valB.length) * sortOrder.value;
-      }
-
-      if (typeof valA === 'string' && typeof valB === 'string') {
-        return valA.localeCompare(valB) * sortOrder.value;
-      }
-
-      return (valA > valB ? 1 : -1) * sortOrder.value;
-    });
-  }
-
-  return sortedList;
 });
 
 const highlightMatch = text => {
-  if (!props.searchQuery) return text;
+  if (!text || !props.searchQuery) return text;
   const query = props.searchQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const regex = new RegExp(`(${query})`, 'gi');
   return text.replace(regex, '<span class="highlight">$1</span>');
 };
 
 const totalRecords = computed(() => filteredList.value.length || 0);
-
-const paginatedList = computed(() => {
-  const start = (currentPage.value - 1) * recordsPerPage.value;
-  return filteredList.value.slice(start, start + recordsPerPage.value);
-});
 
 const updatePage = page => {
   if (!isNaN(page) && page >= 1) {
@@ -112,21 +161,56 @@ const updateRecordsPerPage = value => {
     currentPage.value = 1;
   }
 };
+
+const getUniqueEduLevels = supplements => {
+  if (!supplements || !Array.isArray(supplements)) return [];
+
+  const uniqueLevels = new Set();
+
+  supplements.forEach(supplement => {
+    if (supplement.educational_programs && Array.isArray(supplement.educational_programs)) {
+      supplement.educational_programs.forEach(program => {
+        const firstWord = program.edu_level?.name?.split(' ')[0];
+        if (firstWord && firstWord !== 'Не') {
+          uniqueLevels.add(firstWord);
+        }
+      });
+    }
+  });
+
+  return [...uniqueLevels];
+};
+
+const formatDate = dateStr => {
+  if (!dateStr) return '';
+
+  const date = new Date(dateStr);
+  if (isNaN(date)) return '';
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
 </script>
 
 <template>
-  <table class="table">
+  <Loading v-if="loading" />
+  <p v-if="error" class="error">{{ error }}</p>
+
+  <table v-if="!loading && !error && list.length > 0" class="table">
     <thead class="tHeader">
       <tr class="headRow">
         <th class="headCell">
-          <div class="thContent"><img src="/src/assets/svg/Check.svg" alt="Check" class="check" /></div>
+          <div class="thContent"><img :src="require('@/assets/svg/Check.svg')" alt="Check" class="check" /></div>
         </th>
-        <th class="headCell _hide768px" @click="sortByColumn('date')">
+        <th class="headCell _hide992px" @click="sortByColumn('date')">
           <div class="thContent">
             Дата
             <span class="sortWrap" :class="{ active: sortColumn === 'date' }">
               <img
-                src="/src/assets/svg/Sort.svg"
+                :src="require('@/assets/svg/Sort.svg')"
                 alt="Sort"
                 class="sort"
                 :class="{ rotated: sortColumn === 'date' && sortOrder === -1 }"
@@ -138,7 +222,7 @@ const updateRecordsPerPage = value => {
             Регион
             <span class="sortWrap" :class="{ active: sortColumn === 'region' }">
               <img
-                src="/src/assets/svg/Sort.svg"
+                :src="require('@/assets/svg/Sort.svg')"
                 alt="Sort"
                 class="sort"
                 :class="{ rotated: sortColumn === 'region' && sortOrder === -1 }"
@@ -150,7 +234,7 @@ const updateRecordsPerPage = value => {
             Название
             <span class="sortWrap" :class="{ active: sortColumn === 'name' }">
               <img
-                src="/src/assets/svg/Sort.svg"
+                :src="require('@/assets/svg/Sort.svg')"
                 alt="Sort"
                 class="sort"
                 :class="{ rotated: sortColumn === 'name' && sortOrder === -1 }"
@@ -162,7 +246,7 @@ const updateRecordsPerPage = value => {
             Адрес
             <span class="sortWrap" :class="{ active: sortColumn === 'address' }">
               <img
-                src="/src/assets/svg/Sort.svg"
+                :src="require('@/assets/svg/Sort.svg')"
                 alt="Sort"
                 class="sort"
                 :class="{ rotated: sortColumn === 'address' && sortOrder === -1 }"
@@ -174,7 +258,7 @@ const updateRecordsPerPage = value => {
             Уровень образования
             <span class="sortWrap" :class="{ active: sortColumn === 'level' }">
               <img
-                src="/src/assets/svg/Sort.svg"
+                :src="require('@/assets/svg/Sort.svg')"
                 alt="Sort"
                 class="sort"
                 :class="{ rotated: sortColumn === 'level' && sortOrder === -1 }"
@@ -184,32 +268,35 @@ const updateRecordsPerPage = value => {
       </tr>
     </thead>
     <tbody class="tBody">
-      <tr v-for="item in paginatedList || []" :key="item.id" class="row">
+      <tr v-for="item in sortedList || []" :key="item.uuid" class="row">
         <td class="cell">
           <div class="checkboxWrap">
             <input
               type="checkbox"
               name="checkbox"
-              :id="'checkbox_' + item.id"
+              :id="'checkbox_' + item.uuid"
               class="checkbox"
-              :checked="item.completed"
-              @change="store.toggleCompleted(item.id)"
+              :checked="item.supplements.some(s => s.status.name === 'Действующее') ? true : false"
+              @change="store.toggleStatus(item.uuid)"
             />
-            <label :for="'checkbox_' + item.id" class="checkboxCheckMark"></label>
-            <label :for="'checkbox_' + item.id" class="checkboxFrame"></label>
+            <label :for="'checkbox_' + item.uuid" class="checkboxCheckMark"></label>
+            <label :for="'checkbox_' + item.uuid" class="checkboxFrame"></label>
           </div>
         </td>
-        <td class="cell _hide768px">{{ item.date }}</td>
-        <td class="cell" v-html="highlightMatch(item.region)"></td>
-        <td class="cell" v-html="highlightMatch(item.name)"></td>
-        <td class="cell _hide992px" v-html="highlightMatch(item.address)"></td>
+        <td class="cell _hide992px">{{ formatDate(item.updated_at) }}</td>
+        <td class="cell" v-html="highlightMatch(item.edu_org.region.name)"></td>
+        <td class="cell" v-html="highlightMatch(item.edu_org.short_name ?? item.edu_org.full_name)"></td>
+        <td class="cell _hide992px" v-html="highlightMatch(item.edu_org.contact_info.post_address)"></td>
         <td class="cell _hide480px">
-          <span v-for="(level, index) in item.level || []" :key="index" class="level _hide480px">{{ level }}</span>
+          <div v-if="getUniqueEduLevels(item.supplements).length" class="cell">
+            <span v-for="(level, index) in getUniqueEduLevels(item.supplements)" :key="index" class="level _hide480px">
+              {{ level }}
+            </span>
+          </div>
         </td>
       </tr>
     </tbody>
   </table>
-
   <Pagination
     :totalRecords="totalRecords"
     :currentPage="currentPage"
@@ -223,6 +310,21 @@ const updateRecordsPerPage = value => {
 </template>
 
 <style lang="scss" scoped>
+.error {
+  width: 100%;
+  padding: 20px 0;
+  text-align: center;
+  color: $errorColor;
+
+  @include respondXLarge {
+    font-size: 24px;
+  }
+
+  @include respondMedium {
+    font-size: 18px;
+  }
+}
+
 .table {
   margin: 0px 0px 24px 0px;
 
@@ -275,6 +377,10 @@ const updateRecordsPerPage = value => {
 
 .row {
   border-bottom: 1px solid $inputBorderColor;
+
+  @include respondSmall {
+    border-bottom: none;
+  }
 }
 
 .check {
@@ -306,17 +412,15 @@ const updateRecordsPerPage = value => {
     gap: 4px;
     max-width: 305px;
     padding: 5px 16px;
+
+    @include respondSmall {
+      display: none;
+    }
   }
 }
 
 ._hide992px {
   @include respondMLarge {
-    display: none;
-  }
-}
-
-._hide768px {
-  @include respondMedium {
     display: none;
   }
 }

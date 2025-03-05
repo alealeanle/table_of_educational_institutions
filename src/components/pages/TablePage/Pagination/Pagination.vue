@@ -1,9 +1,9 @@
 <script setup>
-import { computed, defineProps, defineEmits } from 'vue';
+import { computed } from 'vue';
+import { useStubStore } from '@/stores';
 import Dropdown from '@commons/Dropdown';
 
 const props = defineProps({
-  totalRecords: Number,
   currentPage: Number,
   recordsPerPage: Number,
   isFiltered: Boolean,
@@ -11,19 +11,24 @@ const props = defineProps({
 
 const emit = defineEmits(['updatePage', 'updateRecordsPerPage']);
 
-const pageSizes = [10, 20, 30, 40, 50];
+const store = useStubStore();
 
-const totalPages = computed(() => Math.ceil(props.totalRecords / props.recordsPerPage));
+const loading = computed(() => store.loading);
+
+const totalPages = computed(() => store.response.pages_count || 1);
+const totalRecords = computed(() => store.response.total_count || 0);
+
+const pageSizes = ['10', '20', '30', '40', '50'];
 
 const goToPage = page => {
-  if (typeof page === 'number' && page >= 1 && page <= totalPages.value) {
+  if (page >= 1 && page <= totalPages.value) {
     emit('updatePage', page);
   }
 };
 
 const updateRecordsPerPage = value => {
   const newValue = Number(value);
-  if (!isNaN(newValue)) {
+  if (!isNaN(newValue) && newValue > 0) {
     emit('updateRecordsPerPage', newValue);
   }
 };
@@ -57,11 +62,12 @@ const displayedPages = computed(() => {
 </script>
 
 <template>
-  <div class="pagination">
+  <div v-if="!loading" class="pagination">
     <div class="leftBlock">
       <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="btn arrowBtn">
-        <img src="/src/assets/svg/Arrow.svg" alt="Arrow" class="imgLArrow" />
+        <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" class="imgLArrow" />
       </button>
+
       <span class="pagesBtn">
         <button
           v-for="page in displayedPages"
@@ -73,8 +79,9 @@ const displayedPages = computed(() => {
           {{ page }}
         </button>
       </span>
+
       <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="btn arrowBtn">
-        <img src="/src/assets/svg/Arrow.svg" alt="Arrow" class="imgRArrow" />
+        <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" class="imgRArrow" />
       </button>
     </div>
 
@@ -87,8 +94,8 @@ const displayedPages = computed(() => {
       <div class="pagination-size">
         <span class="_hide480px">Показывать</span>
         <Dropdown
-          :options="pageSizes.map(size => ({ label: size.toString(), value: size }))"
-          :model-value="recordsPerPage"
+          :options="pageSizes.map(size => ({ label: size, value: size }))"
+          :model-value="recordsPerPage.toString()"
           @update:model-value="updateRecordsPerPage"
           class="show"
         />

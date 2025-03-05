@@ -5,20 +5,27 @@ import webpack from 'webpack';
 import webpackStream from 'webpack-stream';
 import browserSyncLib from 'browser-sync';
 import { VueLoaderPlugin } from 'vue-loader';
-import { fileURLToPath } from 'url';
 
 const browserSync = browserSyncLib.create();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distFolder = 'dist';
+
+global.app = {
+  isBuild: process.argv.includes('--build'),
+  isDev: !process.argv.includes('--build'),
+  path: path,
+  gulp: gulp,
+};
+
+const publicPath = global.app.isBuild ? '/table/' : './';
 
 async function clean() {
   try {
-    if (fs.existsSync('bundle.js')) {
-      fs.unlinkSync('bundle.js');
-      console.log('✔️ bundle.js удалён');
+    if (fs.existsSync(distFolder)) {
+      fs.rmSync(distFolder, { recursive: true, force: true });
+      console.log('dist очищен перед сборкой');
     }
   } catch (error) {
-    console.error('❌ Ошибка при удалении bundle.js:', error);
+    console.error('Ошибка при очистке dist:', error);
   }
 }
 
@@ -27,13 +34,13 @@ async function build() {
     .src('./main.js')
     .pipe(
       webpackStream({
-        mode: 'development',
+        mode: global.app.isBuild ? 'production' : 'development',
         watch: false,
         cache: false,
         entry: './main.js',
         output: {
-          filename: 'bundle.js',
-          publicPath: '/',
+          filename: 'index.js',
+          publicPath: publicPath,
         },
         resolve: {
           alias: {
@@ -41,6 +48,7 @@ async function build() {
             '@commons': path.resolve('src/components/commons'),
             '@pages': path.resolve('src/components/pages'),
             '@TablePage': path.resolve('src/components/pages/TablePage'),
+            '@api': path.resolve('src/api'),
           },
         },
         module: {
@@ -88,6 +96,12 @@ async function build() {
             },
           ],
         },
+        devServer: {
+          historyApiFallback: true,
+          hot: true,
+          open: true,
+          port: 3000,
+        },
         plugins: [
           new VueLoaderPlugin(),
           new webpack.DefinePlugin({
@@ -108,7 +122,12 @@ async function build() {
 }
 
 function copyStatic() {
-  return gulp.src(['index.html', 'src/assets/**/*', 'src/stubs/**/*'], { base: '.' }).pipe(gulp.dest(distFolder));
+  return gulp
+    .src('index.html')
+    .pipe(gulp.dest(distFolder))
+    .on('end', () => {
+      return gulp.src('src/assets/**/*', { base: 'src/assets' }).pipe(gulp.dest(path.join(distFolder, 'assets')));
+    });
 }
 
 function serve() {
@@ -120,6 +139,14 @@ function serve() {
     open: true,
     notify: false,
     port: 3000,
+    middleware: [
+      function (req, res, next) {
+        if (req.url.startsWith('/table')) {
+          req.url = '/index.html';
+        }
+        next();
+      },
+    ],
   });
 
   gulp.watch(

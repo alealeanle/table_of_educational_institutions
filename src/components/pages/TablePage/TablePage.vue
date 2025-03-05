@@ -6,7 +6,7 @@ import Table from '@TablePage/Table';
 const searchQuery = ref('');
 const dateRange = ref([]);
 const selectedType = ref('Все');
-const selectedStatus = ref('all');
+const selectedStatus = ref('Все');
 
 const updateSearchQuery = query => {
   searchQuery.value = query;

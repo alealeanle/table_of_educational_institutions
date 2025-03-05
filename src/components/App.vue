@@ -1,10 +1,8 @@
-<script setup>
-import TablePage from '@TablePage';
-</script>
+<script setup></script>
 
 <template>
   <div class="root _container">
-    <TablePage />
+    <router-view />
   </div>
 </template>
 

@@ -1,16 +1,28 @@
 import { defineStore } from 'pinia';
-import { list } from '@/stubs';
 
-export const useStubStore = defineStore('stub', {
+export const useStubStore = defineStore('responseData', {
   state: () => ({
-    list,
+    response: {},
+    error: {},
+    loading: false,
   }),
+
   actions: {
-    toggleCompleted(id) {
-      const item = this.list.find(item => item.id === id);
+    toggleStatus(uuid) {
+      const item = this.response.list.find(item => item.uuid === uuid);
+
       if (item) {
-        item.completed = !item.completed;
+        const supplement = item.supplements.find(
+          s => s.status.name === 'Действующее' || s.status.name === 'Недействующее',
+        );
+
+        if (supplement) {
+          supplement.status.name = supplement.status.name === 'Действующее' ? 'Недействующее' : 'Действующее';
+        }
       }
+    },
+    setData(data) {
+      this.response = { ...data };
     },
   },
 });

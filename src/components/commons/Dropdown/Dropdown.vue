@@ -44,7 +44,7 @@ onClickOutside(dropdownRef, () => {
   <div class="dropdown" ref="dropdownRef">
     <button class="dropdown-btn" @click="toggleDropdown">
       {{ selectedLabel }}
-      <img src="/src/assets/svg/Arrow.svg" alt="Arrow" class="arrow" :class="{ open: isOpen }" />
+      <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" class="arrow" :class="{ open: isOpen }" />
     </button>
 
     <ul v-if="isOpen" class="dropdown-menu">

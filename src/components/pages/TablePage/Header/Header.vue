@@ -1,11 +1,11 @@
 <script setup>
-import { ref, defineEmits } from 'vue';
+import { computed, ref } from 'vue';
 import * as XLSX from 'xlsx';
 import DatePicker from '@vuepic/vue-datepicker';
-import '@vuepic/vue-datepicker/dist/main.css';
 import { useStubStore } from '@/stores';
 import Button from '@commons/Button';
 import Dropdown from '@commons/Dropdown';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 const emit = defineEmits(['updateSearch', 'updateDateRange', 'updateType', 'updateStatus']);
 
@@ -30,16 +30,13 @@ const updateStatus = () => {
 
 const dropdownTypeOptions = ref([
   { label: 'Все виды', value: 'Все' },
-  { label: 'Высшее', value: 'Высшее' },
-  { label: 'Бакалавр', value: 'Бакалавр' },
-  { label: 'Специальное', value: 'Специальное' },
-  { label: 'Проф', value: 'Проф' },
-  { label: 'Среднее', value: 'Среднее' },
+  { label: 'Постоянное', value: 'Постоянное' },
+  { label: 'Не определен', value: 'Не определен' },
 ]);
 const dropdownStatusOptions = ref([
-  { label: 'Все статусы', value: 'all' },
-  { label: 'Заершенные', value: 'completed' },
-  { label: 'Не завершенные', value: 'not_completed' },
+  { label: 'Все статусы', value: 'Все' },
+  { label: 'Действующее', value: 'Действующее' },
+  { label: 'Недействующее', value: 'Недействующее' },
 ]);
 const selectedTypeOption = ref(dropdownTypeOptions.value[0].value);
 const selectedStatusOption = ref(dropdownStatusOptions.value[0].value);
@@ -65,26 +62,48 @@ const format = dateRange => {
 };
 
 const store = useStubStore();
-const list = store.list;
+const list = computed(() => store.response.list);
+
+const getUniqueEduLevels = supplements => {
+  if (!supplements || !Array.isArray(supplements)) return [];
+
+  const uniqueLevels = new Set();
+
+  supplements.forEach(supplement => {
+    if (supplement.educational_programs && Array.isArray(supplement.educational_programs)) {
+      supplement.educational_programs.forEach(program => {
+        const firstWord = program.edu_level?.name?.split(' ')[0];
+        if (firstWord !== 'Не') {
+          uniqueLevels.add(program.edu_level?.name);
+        }
+      });
+    }
+  });
+
+  return [...uniqueLevels];
+};
 
 const downloadExcel = () => {
-  const formattedList = list.map(obj => {
+  const formattedList = list.value.map(obj => {
     let newObj = {};
-    for (let key in obj) {
-      if (Array.isArray(obj[key])) {
-        newObj[key.toUpperCase()] = obj[key].join(', ');
-      } else {
-        newObj[key.toUpperCase()] = obj[key];
-      }
-    }
+
+    newObj['Дата обновления'] = obj.updated_at;
+    newObj['Регион'] = obj.edu_org?.region?.name;
+    newObj['Название'] = obj.edu_org?.full_name;
+    newObj['Адрес'] = obj.edu_org?.contact_info?.post_address;
+
+    newObj['Уровень образования'] = getUniqueEduLevels(obj.supplements).join(', ');
+
+    newObj['Статус'] = obj.supplements.some(s => s.status.name === 'Действующее') ? 'Действующее' : 'Не действующее';
+
     return newObj;
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(formattedList);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Учереждения');
+  const ws = XLSX.utils.json_to_sheet(formattedList);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Таблица');
 
-  XLSX.writeFile(workbook, 'Таблица учереждений.xlsx');
+  XLSX.writeFile(wb, 'Таблица учреждений.xlsx');
 };
 </script>
 
@@ -94,9 +113,9 @@ const downloadExcel = () => {
       <h1 class="title">Таблица учреждений</h1>
       <div class="controlsGroup">
         <input type="text" class="searchInput" placeholder="Поиск" v-model="searchQuery" @input="updateSearch" />
-        <img src="/src/assets/svg/Find.svg" alt="Find" class="find" />
+        <img :src="require('@/assets/svg/Find.svg')" alt="Find" class="find" />
         <Button type="accent" @click="downloadExcel">
-          <img src="/src/assets/svg/Download.svg" alt="Download" class="download" />Скачать
+          <img :src="require('@/assets/svg/Download.svg')" alt="Download" class="download" />Скачать
         </Button>
       </div>
     </div>
@@ -123,7 +142,7 @@ const downloadExcel = () => {
             </div>
           </template>
         </DatePicker>
-        <img src="/src/assets/svg/Calendar.svg" alt="Calendar" class="calendar" />
+        <img :src="require('@/assets/svg/Calendar.svg')" alt="Calendar" class="calendar" />
       </div>
       <Dropdown
         class="dropdown _type"

@@ -1,20 +1,22 @@
 {
-  "name": "vue3-webpack-gulp-template",
+  "name": "table_of_educational_institutions",
   "version": "0.0.0",
-  "description": "A minimal template to compile vue with webpack and gulp",
+  "description": "table_of_educational_institutions ",
   "main": "index.js",
   "scripts": {
     "dev": "gulp watch",
-    "build": "gulp buildTask"
+    "build": "gulp buildTask --build"
   },
   "author": "Adinan Cenci",
   "license": "ISC",
   "dependencies": {
     "@vuepic/vue-datepicker": "^11.0.1",
     "@vueuse/core": "^12.7.0",
+    "axios": "^1.8.1",
     "date-fns": "^4.1.0",
     "pinia": "^3.0.1",
     "vue": "^3.2.47",
+    "vue-router": "4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
