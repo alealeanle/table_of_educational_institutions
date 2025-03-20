@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import TablePage from '@pages/TablePage';
+import NotFoundPage from '@pages/NotFoundPage';
 
 const routes = [
   {
@@ -10,6 +11,11 @@ const routes = [
     path: '/table',
     name: 'Table',
     component: TablePage,
+  },
+  {
+    path: '/:catchAll(.*)',
+    name: 'NotFound',
+    component: NotFoundPage,
   },
 ];
 

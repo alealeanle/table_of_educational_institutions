@@ -1,10 +1,12 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useStubStore } from '@/stores';
+import { useStore } from '@/stores';
 import { fetchList } from '@api/fetchList';
+import TableContent from './TableContent';
 import Pagination from '@TablePage/Pagination';
 import Loading from '@commons/Loading';
+import s from './Table.module.scss';
 
 const props = defineProps({
   searchQuery: String,
@@ -15,7 +17,7 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
-const store = useStubStore();
+const store = useStore();
 
 const sortColumn = ref(null);
 const sortOrder = ref(1);
@@ -92,15 +94,6 @@ const filteredList = computed(() => {
   });
 });
 
-const sortByColumn = column => {
-  if (sortColumn.value === column) {
-    sortOrder.value *= -1;
-  } else {
-    sortColumn.value = column;
-    sortOrder.value = 1;
-  }
-};
-
 const sortedList = computed(() => {
   if (!filteredList.value || filteredList.value.length === 0) return [];
 
@@ -143,7 +136,7 @@ const highlightMatch = text => {
   if (!text || !props.searchQuery) return text;
   const query = props.searchQuery.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const regex = new RegExp(`(${query})`, 'gi');
-  return text.replace(regex, '<span class="highlight">$1</span>');
+  return text.replace(regex, `<span class="${s.highlight}">$1</span>`);
 };
 
 const totalRecords = computed(() => filteredList.value.length || 0);
@@ -196,313 +189,53 @@ const formatDate = dateStr => {
 </script>
 
 <template>
-  <Loading v-if="loading" />
-  <p v-if="error" class="error">{{ error }}</p>
+  <transition name="fade">
+    <Loading v-if="loading" key="111" />
+  </transition>
+  <p v-if="error" :class="[s.error, s.fade]">{{ error }}</p>
 
-  <table v-if="!loading && !error && list.length > 0" class="table">
-    <thead class="tHeader">
-      <tr class="headRow">
-        <th class="headCell">
-          <div class="thContent"><img :src="require('@/assets/svg/Check.svg')" alt="Check" class="check" /></div>
-        </th>
-        <th class="headCell _hide992px" @click="sortByColumn('date')">
-          <div class="thContent">
-            Дата
-            <span class="sortWrap" :class="{ active: sortColumn === 'date' }">
-              <img
-                :src="require('@/assets/svg/Sort.svg')"
-                alt="Sort"
-                class="sort"
-                :class="{ rotated: sortColumn === 'date' && sortOrder === -1 }"
-            /></span>
-          </div>
-        </th>
-        <th class="headCell" @click="sortByColumn('region')">
-          <div class="thContent">
-            Регион
-            <span class="sortWrap" :class="{ active: sortColumn === 'region' }">
-              <img
-                :src="require('@/assets/svg/Sort.svg')"
-                alt="Sort"
-                class="sort"
-                :class="{ rotated: sortColumn === 'region' && sortOrder === -1 }"
-            /></span>
-          </div>
-        </th>
-        <th class="headCell" @click="sortByColumn('name')">
-          <div class="thContent">
-            Название
-            <span class="sortWrap" :class="{ active: sortColumn === 'name' }">
-              <img
-                :src="require('@/assets/svg/Sort.svg')"
-                alt="Sort"
-                class="sort"
-                :class="{ rotated: sortColumn === 'name' && sortOrder === -1 }"
-            /></span>
-          </div>
-        </th>
-        <th class="headCell _hide992px" @click="sortByColumn('address')">
-          <div class="thContent">
-            Адрес
-            <span class="sortWrap" :class="{ active: sortColumn === 'address' }">
-              <img
-                :src="require('@/assets/svg/Sort.svg')"
-                alt="Sort"
-                class="sort"
-                :class="{ rotated: sortColumn === 'address' && sortOrder === -1 }"
-            /></span>
-          </div>
-        </th>
-        <th class="headCell _hide480px" @click="sortByColumn('level')">
-          <div class="thContent _hide480px">
-            Уровень образования
-            <span class="sortWrap" :class="{ active: sortColumn === 'level' }">
-              <img
-                :src="require('@/assets/svg/Sort.svg')"
-                alt="Sort"
-                class="sort"
-                :class="{ rotated: sortColumn === 'level' && sortOrder === -1 }"
-            /></span>
-          </div>
-        </th>
-      </tr>
-    </thead>
-    <tbody class="tBody">
-      <tr v-for="item in sortedList || []" :key="item.uuid" class="row">
-        <td class="cell">
-          <div class="checkboxWrap">
-            <input
-              type="checkbox"
-              name="checkbox"
-              :id="'checkbox_' + item.uuid"
-              class="checkbox"
-              :checked="item.supplements.some(s => s.status.name === 'Действующее') ? true : false"
-              @change="store.toggleStatus(item.uuid)"
-            />
-            <label :for="'checkbox_' + item.uuid" class="checkboxCheckMark"></label>
-            <label :for="'checkbox_' + item.uuid" class="checkboxFrame"></label>
-          </div>
-        </td>
-        <td class="cell _hide992px">{{ formatDate(item.updated_at) }}</td>
-        <td class="cell" v-html="highlightMatch(item.edu_org.region.name)"></td>
-        <td class="cell" v-html="highlightMatch(item.edu_org.short_name ?? item.edu_org.full_name)"></td>
-        <td class="cell _hide992px" v-html="highlightMatch(item.edu_org.contact_info.post_address)"></td>
-        <td class="cell _hide480px">
-          <div v-if="getUniqueEduLevels(item.supplements).length" class="cell">
-            <span v-for="(level, index) in getUniqueEduLevels(item.supplements)" :key="index" class="level _hide480px">
-              {{ level }}
-            </span>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <Pagination
-    :totalRecords="totalRecords"
-    :currentPage="currentPage"
-    :recordsPerPage="recordsPerPage"
-    :isFiltered="
-      !!props.searchQuery || props.dateRange.length || props.selectedType !== 'Все' || props.selectedStatus !== 'all'
-    "
-    @updatePage="updatePage"
-    @updateRecordsPerPage="updateRecordsPerPage"
-  />
+  <transition-group name="fade">
+    <TableContent
+      key="222"
+      v-if="!loading && !error && list.length > 0"
+      :sortedList="sortedList"
+      v-model:sortColumn="sortColumn"
+      v-model:sortOrder="sortOrder"
+      :highlightMatch="highlightMatch"
+      :getUniqueEduLevels="getUniqueEduLevels"
+      :formatDate="formatDate"
+    />
+    <Pagination
+      key="333"
+      :totalRecords="totalRecords"
+      :currentPage="currentPage"
+      :recordsPerPage="recordsPerPage"
+      :isFiltered="
+        !!props.searchQuery ||
+        !!props.dateRange.length ||
+        props.selectedType !== 'Все' ||
+        props.selectedStatus !== 'Все'
+      "
+      @updatePage="updatePage"
+      @updateRecordsPerPage="updateRecordsPerPage"
+    />
+  </transition-group>
 </template>
 
 <style lang="scss" scoped>
-.error {
-  width: 100%;
-  padding: 20px 0;
-  text-align: center;
-  color: $errorColor;
-
-  @include respondXLarge {
-    font-size: 24px;
-  }
-
-  @include respondMedium {
-    font-size: 18px;
-  }
+.fade-move,
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.5s ease;
 }
 
-.table {
-  margin: 0px 0px 24px 0px;
-
-  @include respondMedium {
-    margin: 0px 0px 15px 0px;
-  }
-}
-
-.tHeader {
-  background-color: $lightGray;
-}
-
-.thContent {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 700;
-  color: $gray;
-  cursor: pointer;
-
-  @include respondMedium {
-    width: 100%;
-    padding: 3px;
-    font-size: 10px;
-  }
-}
-
-.sortWrap {
-  right: 10px;
-  padding: 1px;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  transition: border-color 0.3s ease 0s;
-
-  &.active {
-    border-color: $lightGreen;
-    background-color: $whiteGreen;
-  }
-}
-
-.sort {
-  transition: transform 0.3s ease;
-
-  &.rotated {
-    transform: rotate(180deg);
-  }
-}
-
-.row {
-  border-bottom: 1px solid $inputBorderColor;
-
-  @include respondSmall {
-    border-bottom: none;
-  }
-}
-
-.check {
-  margin-left: 2px;
-  width: 22px;
-  height: 22px;
-}
-
-.cell {
-  padding: 22px 16px;
-  font-size: 14px;
-
-  @include respondXXLarge {
-    padding: 16px;
-  }
-
-  @include respondMedium {
-    padding: 3px;
-    font-size: 10px;
-  }
-
-  @include respondSmall {
-    padding: 8px 3px;
-  }
-
-  &:last-child {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-width: 305px;
-    padding: 5px 16px;
-
-    @include respondSmall {
-      display: none;
-    }
-  }
-}
-
-._hide992px {
-  @include respondMLarge {
-    display: none;
-  }
-}
-
-._hide480px {
-  @include respondSmall {
-    display: none;
-  }
-}
-
-.level {
-  padding: 4px 6px;
-  border: 1px solid #e6e6e7;
-  border-radius: 8px;
-}
-
-.checkboxWrap {
-  position: relative;
-}
-
-.checkbox {
-  position: absolute;
-  top: -8px;
-  left: 5px;
-  z-index: 1;
-  width: 16px;
-  height: 16px;
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
-  cursor: pointer;
-
-  &:checked + .checkboxCheckMark {
-    position: absolute;
-    cursor: pointer;
-
-    &:before {
-      content: '';
-      position: absolute;
-      z-index: 1;
-      top: -1px;
-      left: 9px;
-      width: 10px;
-      height: 2px;
-      border-radius: 40px;
-      background: $bgColor;
-      transform: rotate(-45deg);
-      pointer-events: none;
-    }
-
-    &:after {
-      content: '';
-      position: absolute;
-      z-index: 1;
-      top: 1px;
-      left: 7px;
-      width: 5px;
-      height: 2px;
-      border-radius: 40px;
-      background-color: $bgColor;
-      transform: rotate(45deg);
-    }
-  }
-
-  &:checked ~ .checkboxFrame {
-    background-color: #1b1b1f;
-  }
+  transform: translateY(20px);
 }
 
-.checkboxFrame {
+.fade-leave-active {
   position: absolute;
-  top: -9px;
-  left: 4px;
-  width: 18px;
-  height: 18px;
-  border-radius: 2px;
-  background-color: $inputBorderColor;
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: 50% 50%;
-}
-
-:deep(.highlight) {
-  background-color: $highlight;
-  border-radius: 2px;
 }
 </style>

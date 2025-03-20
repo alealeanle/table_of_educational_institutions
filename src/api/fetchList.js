@@ -1,8 +1,8 @@
 import api from '@/api';
-import { useStubStore } from '@/stores';
+import { useStore } from '@/stores';
 
 export const fetchList = async (params = {}) => {
-  const store = useStubStore();
+  const store = useStore();
 
   store.loading = true;
   store.error = null;

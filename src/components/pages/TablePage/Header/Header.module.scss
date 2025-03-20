@@ -1,0 +1,179 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0px 0px 24px 0px;
+
+  @include respondMedium {
+    margin: 0px 0px 16px 0px;
+  }
+
+  @include respondSmall {
+    margin: 0px 0px 10px 0px;
+  }
+}
+
+.row_1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+
+  @include respondMedium {
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  &:not(:last-child) {
+    margin: 0px 0px 24px 0px;
+
+    @include respondMedium {
+      margin: 0px 0px 16px 0px;
+    }
+
+    @include respondSmall {
+      margin: 0px 0px 10px 0px;
+    }
+  }
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 120%;
+  letter-spacing: 0%;
+  text-align: left;
+  color: $darkGray;
+
+  @include respondXLarge {
+    font-size: 24px;
+  }
+
+  @include respondLarge {
+    font-size: 20px;
+  }
+}
+
+.controlsGroup {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  @include respondSmall {
+    gap: 10px;
+  }
+}
+
+.searchInput {
+  width: 300px;
+  height: 56px;
+  padding: 16px 50px 16px 24px;
+  font-size: 16px;
+  border: 1px solid $inputBorderColor;
+  border-radius: 10px;
+  outline: none;
+  transition: box-shadow 0.3s ease 0s;
+
+  @include respondXLarge {
+    height: 50px;
+    padding: 16px 50px 16px 16px;
+    font-size: 15px;
+  }
+
+  @include respondLarge {
+    height: 40px;
+    padding: 16px 40px 15px 10px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  @include respondMedium {
+    height: 30px;
+  }
+
+  @include respondSmall {
+    width: 70%;
+    padding: 16px;
+  }
+
+  &:hover,
+  &:focus {
+    box-shadow: 0px 0px 10px 2px rgba(34, 60, 80, 0.2);
+  }
+
+  &::placeholder {
+    font-size: 16px;
+    color: $gray;
+    user-select: none;
+
+    @include respondXLarge {
+      font-size: 15px;
+    }
+
+    @include respondLarge {
+      font-size: 14px;
+    }
+  }
+}
+
+.find {
+  position: absolute;
+  left: 255px;
+  pointer-events: none;
+  user-select: none;
+
+  @include respondLarge {
+    left: 265px;
+  }
+
+  @include respondMedium {
+    width: 17px;
+    left: 270px;
+  }
+
+  @include respondSmall {
+    display: none;
+  }
+}
+
+.downloadBtn {
+  user-select: none;
+}
+
+.download {
+  margin: 0px 8px 0px 0px;
+}
+
+.row_2 {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+
+  @include respondMedium {
+    flex-direction: column;
+  }
+}
+
+.dropdown {
+  width: 35%;
+  height: 56px;
+
+  @include respondXXLarge {
+    width: 517px;
+  }
+
+  @include respondXLarge {
+    height: 50px;
+  }
+
+  @include respondLarge {
+    height: 40px;
+  }
+
+  @include respondMedium {
+    width: auto;
+    height: 30px;
+  }
+}

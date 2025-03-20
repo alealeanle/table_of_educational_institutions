@@ -1,0 +1,84 @@
+.btn {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 150px;
+  height: 56px;
+  padding: 16px 24px;
+  font-size: 16px;
+  line-height: 130%;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease 0s;
+
+  @include respondXLarge {
+    height: 50px;
+    padding: 16px 20px;
+    font-size: 15px;
+  }
+
+  @include respondLarge {
+    width: 100px;
+    height: 40px;
+    padding: 16px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  @include respondMedium {
+    height: 34px;
+  }
+}
+
+.btnAccent {
+  background-color: $lightGreen;
+
+  @media (any-hover: hover) {
+    &:hover {
+      background-color: $green;
+    }
+  }
+
+  &:focus {
+    outline: none;
+    background-color: $green;
+  }
+
+  &:active {
+    background-color: $darkGreen;
+  }
+}
+
+.btnPrimary {
+  color: $bgColor;
+  background-color: $darkBlack;
+
+  @media (any-hover: hover) {
+    &:hover {
+      color: $darkBlack;
+      background-color: $green;
+    }
+  }
+
+  &:active {
+    color: $darkBlack;
+    background-color: $darkGreen;
+  }
+}
+
+.btnSecondary {
+  background-color: transparent;
+  border: 1px solid $gray;
+  transition: border-color 0.3s ease 0s;
+
+  @media (any-hover: hover) {
+    &:hover {
+      border-color: $darkBlack;
+    }
+  }
+
+  &:active {
+    background-color: #f0f0f7;
+  }
+}

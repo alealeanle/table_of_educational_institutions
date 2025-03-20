@@ -47,8 +47,9 @@ async function build() {
             '@': path.resolve('src'),
             '@commons': path.resolve('src/components/commons'),
             '@pages': path.resolve('src/components/pages'),
-            '@TablePage': path.resolve('src/components/pages/TablePage'),
+            '@composables': path.resolve('src/components/composables'),
             '@api': path.resolve('src/api'),
+            '@TablePage': path.resolve('src/components/pages/TablePage'),
           },
         },
         module: {
@@ -150,7 +151,15 @@ function serve() {
   });
 
   gulp.watch(
-    ['./main.js', './src/components/**/*.vue', './src/styles/**/*.scss', './index.html'],
+    ['./main.js', './src/components/**/*.vue', './index.html'],
+    gulp.series(clean, copyStatic, build, done => {
+      browserSync.reload();
+      done();
+    }),
+  );
+
+  gulp.watch(
+    './src/**/*.scss',
     gulp.series(clean, copyStatic, build, done => {
       browserSync.reload();
       done();

@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
-import { useStubStore } from '@/stores';
+import { useStore } from '@/stores';
 import Dropdown from '@commons/Dropdown';
+import s from './Pagination.module.scss';
 
 const props = defineProps({
   currentPage: Number,
@@ -11,9 +12,10 @@ const props = defineProps({
 
 const emit = defineEmits(['updatePage', 'updateRecordsPerPage']);
 
-const store = useStubStore();
+const store = useStore();
 
 const loading = computed(() => store.loading);
+const error = computed(() => store.error);
 
 const totalPages = computed(() => store.response.pages_count || 1);
 const totalRecords = computed(() => store.response.total_count || 0);
@@ -62,214 +64,50 @@ const displayedPages = computed(() => {
 </script>
 
 <template>
-  <div v-if="!loading" class="pagination">
-    <div class="leftBlock">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="btn arrowBtn">
-        <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" class="imgLArrow" />
+  <div v-if="!loading" :class="s.pagination">
+    <div :class="s.leftBlock">
+      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" :class="[s.btn, s.arrowBtn]">
+        <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" :class="s.imgLArrow" />
       </button>
 
-      <span class="pagesBtn">
+      <span :class="s.pagesBtn">
         <button
           v-for="page in displayedPages"
           :key="page"
           @click="goToPage(page)"
-          class="btn"
-          :class="{ active: page === currentPage, dots: page === '...' }"
+          :tabindex="page === '...' && -1"
+          :class="[s.btn, { [s.active]: page === currentPage, [s.dots]: page === '...' }]"
         >
           {{ page }}
         </button>
       </span>
 
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="btn arrowBtn">
-        <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" class="imgRArrow" />
+      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" :class="[s.btn, s.arrowBtn]">
+        <img :src="require('@/assets/svg/Arrow.svg')" alt="Arrow" :class="s.imgRArrow" />
       </button>
     </div>
 
-    <div class="rightBlock">
-      <div v-if="!isFiltered" class="pagination-info">
+    <div v-if="!error" :class="s.rightBlock">
+      <div v-if="!isFiltered" :class="s.paginationInfo">
         {{ (currentPage - 1) * recordsPerPage + 1 }}-{{ Math.min(currentPage * recordsPerPage, totalRecords) }} из
         {{ totalRecords }} записей
       </div>
 
-      <div class="pagination-size">
-        <span class="_hide480px">Показывать</span>
+      <div v-if="!error" :class="s.paginationSize">
+        <span :class="s._hide480px">Показывать</span>
         <Dropdown
           :options="pageSizes.map(size => ({ label: size, value: size }))"
           :model-value="recordsPerPage.toString()"
           @update:model-value="updateRecordsPerPage"
-          class="show"
+          :class="s.show"
+          :customDropdownClass="s.dropdown"
+          :customDropdownBtnClass="s.dropdownBtn"
+          :customArrowClass="s.arrow"
+          :customMenuItemClass="s.menuItem"
         />
       </div>
     </div>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.leftBlock {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn {
-  background: none;
-  padding: 10px 14px;
-  font-family: Gothampro;
-  font-size: 12px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: border-color 0.3s ease;
-
-  @include respondMedium {
-    padding: 6px 12px;
-    font-size: 10px;
-    border-radius: 4px;
-  }
-
-  @include respondSmall {
-    padding: 3px 6px;
-  }
-
-  &:hover {
-    border-color: $gray;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: auto;
-
-    &:hover {
-      border-color: $inputBorderColor;
-    }
-  }
-}
-
-.pagesBtn {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.active {
-  background-color: $lightGray;
-}
-
-.dots {
-  pointer-events: none;
-  border: none;
-  background: none;
-
-  @include respondSmall {
-    padding: 0;
-  }
-}
-
-.arrowBtn {
-  padding: 6px 10px;
-  font-weight: bold;
-  border: 1px solid $inputBorderColor;
-
-  @include respondMedium {
-    padding: 3px 5px;
-  }
-
-  @include respondSmall {
-    padding: 0;
-  }
-}
-
-.imgLArrow {
-  rotate: 90deg;
-
-  @include respondSmall {
-    width: 20px;
-  }
-}
-
-.imgRArrow {
-  rotate: -90deg;
-
-  @include respondSmall {
-    width: 20px;
-  }
-}
-
-.rightBlock {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #687588;
-
-  @include respondMedium {
-    display: none;
-    font-size: 10px;
-  }
-}
-
-.pagination-size {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #687588;
-
-  @include respondMedium {
-    font-size: 10px;
-  }
-}
-
-:deep(.dropdown) {
-  width: 73px;
-  height: 36px;
-
-  @include respondSmall {
-    width: 50px;
-    height: 25px;
-  }
-}
-
-:deep(.dropdown-btn) {
-  width: 73px;
-  height: 36px;
-  padding: 10px 44px 10px 16px;
-  font-family: Gothampro;
-  font-size: 12px;
-
-  @include respondSmall {
-    width: 50px;
-    height: 25px;
-    padding: 8px 30px 8px 10px;
-    font-size: 10px;
-  }
-}
-
-:deep(.arrow) {
-  position: absolute;
-  right: 10px;
-
-  @include respondSmall {
-    width: 15px;
-  }
-}
-
-:deep(.menuItem) {
-  @include respondMedium {
-    font-size: 10px;
-  }
-}
-
-._hide480px {
-  display: none;
-}
-</style>
+<style />

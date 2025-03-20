@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 
-export const useStubStore = defineStore('responseData', {
+export const useStore = defineStore('responseData', {
   state: () => ({
     response: {},
     error: {},
