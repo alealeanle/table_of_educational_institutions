@@ -16,7 +16,7 @@ global.app = {
   gulp: gulp,
 };
 
-const publicPath = global.app.isBuild ? '/table/' : './';
+const publicPath = global.app.isBuild ? '/table_of_educational_institutions/' : './';
 
 async function clean() {
   try {
